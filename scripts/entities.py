@@ -99,15 +99,15 @@ class Player(PhysicsEntity):
         self.air_time = 0
         self.dashing = 0
         self.dash_cooldown = 0
-        self.dash_ghosts = []  # list of [image, pos, alpha]
-        self.dash_hit = set()  # slimes already hit this dash
+        self.dash_ghosts = []  
+        self.dash_hit = set() 
         self.attacking = False
         self.hp = 100
         self.max_hp = 100
         self.hurt_cooldown = 0
         self.mode_cooldown = 0
         self.dead = False
-        self.jump_hint_timer = 0  # frames to show the "can't jump" hint
+        self.jump_hint_timer = 0  
         self.attack_cooldown = 0
 
     def dash(self):
@@ -130,12 +130,11 @@ class Player(PhysicsEntity):
     
     def update(self, tilemap, movement = (0, 0)):
         
-        # freeze everything while dead, just tick the animation
+       
         if self.dead:
             self.animation.update()
             return
 
-        # freeze horizontal movement while attacking
         if self.attacking:
             movement = (0, movement[1])
 
@@ -143,11 +142,9 @@ class Player(PhysicsEntity):
 
         if self.dashing > 0:
             self.dashing -= 1
-            # spawn a ghost every other frame during dash
             if self.dashing % 2 == 0:
                 ghost_img = self.animation.img().copy()
                 ghost_img.set_alpha(180)
-                # use the same anim_offset logic as render()
                 if self.mode == "sword" and self.action in ("idle", "idle_left"):
                     aoff = (-17, -9)
                 elif self.mode == "sword" and self.action in ("attack", "attack_left"):
@@ -161,9 +158,8 @@ class Player(PhysicsEntity):
         else:
             self.velocity[0] *= 0.9
 
-        # fade and remove old ghosts
         for ghost in self.dash_ghosts[:]:
-            ghost[2] -= 18  # fade speed — lower = lingers longer
+            ghost[2] -= 18  
             if ghost[2] <= 0:
                 self.dash_ghosts.remove(ghost)
             else:
@@ -207,9 +203,9 @@ class Player(PhysicsEntity):
         elif self.attacking:
             if self.animation.done:
                 self.attacking = False
-                self.attack_cooldown = 40  # ~0.67s at 60fps — adjust as needed
+                self.attack_cooldown = 40  
             else:
-                # keep the correct attack action locked in
+        
                 if self.facing_left:
                     self.set_action('attack_left')
                 else:
@@ -258,7 +254,6 @@ class Player(PhysicsEntity):
             self.set_action("attack")
 
     def render(self, surf, offset=(0, 0)):
-        # draw dash ghosts behind the player
         for ghost_img, ghost_pos, _ in self.dash_ghosts:
             surf.blit(ghost_img, (int(ghost_pos[0] - offset[0]), int(ghost_pos[1] - offset[1])))
 
@@ -279,7 +274,7 @@ class Player(PhysicsEntity):
             self.mode = "staff" if self.mode == "normal" else "normal"
             self.action = ""
             self.set_action("idle")
-            self.mode_cooldown = 90  # 1.5 seconds — adjust as needed
+            self.mode_cooldown = 90  
 
     def toggle_sword_mode(self):
             if self.mode_cooldown > 0:
@@ -287,12 +282,12 @@ class Player(PhysicsEntity):
             self.mode = "sword" if self.mode != "sword" else "normal"
             self.action = ""
             self.set_action("idle")
-            self.mode_cooldown = 90  # 1.5 seconds — adjust as needed
+            self.mode_cooldown = 90  
 
     def jump(self):
         if self.dead or self.mode == "sword":
             if self.mode == "sword":
-                self.jump_hint_timer = 120  # show for 2 seconds
+                self.jump_hint_timer = 120  
             return
         if self.jumps:
             self.velocity[1] = -4 if self.mode == "staff" else -2
@@ -301,7 +296,7 @@ class Player(PhysicsEntity):
 
 
 class Slime(PhysicsEntity):
-    DETECT_RANGE = 60  # pixels — switches to attack animation
+    DETECT_RANGE = 60 
     WALK_SPEED   = 0.4
 
     def __init__(self, game, pos):
@@ -319,7 +314,7 @@ class Slime(PhysicsEntity):
         self.max_hp = 300
         self.hurt_cooldown = 0
         self.dead = False
-        self.can_deal_damage = False  # fires once at the last frame of each attack cycle
+        self.can_deal_damage = False  
         self.set_action('idle')
 
     def rect(self):
@@ -341,7 +336,7 @@ class Slime(PhysicsEntity):
                 self.set_action('death')
 
     def update(self, tilemap, movement=(0, 0)):
-        # just tick the death animation, no physics or AI
+     
         if self.dead:
             self.animation.update()
             return
@@ -350,30 +345,27 @@ class Slime(PhysicsEntity):
         in_range = abs(dx) < self.DETECT_RANGE
 
         if in_range:
-            # stop moving, face the player every frame
+          
             super().update(tilemap, movement=(0, 0))
             new_facing = dx < 0
             if new_facing != self.facing_left:
-                # player crossed to the other side — reset attack state
+             
                 self.facing_left = new_facing
                 self.can_deal_damage = False
-                self.action = ''  # force set_action to reset animation
+                self.action = '' 
             if self.facing_left:
                 self.set_action('attack_left')
             else:
                 self.set_action('attack')
 
-            # deal damage only on the last frame of the attack animation
             anim = self.animation
             last_frame = anim.img_duration * len(anim.images) - 1
             if anim.frame >= last_frame:
                 self.can_deal_damage = True
             if self.can_deal_damage and anim.frame < anim.img_duration:
-                # animation just looped — fire damage once then reset (AOE, no direction check)
                 self.game.player.take_damage(20)
                 self.can_deal_damage = False
         else:
-            # patrol left/right, flip on wall hit
             self.can_deal_damage = False
             walk_dir = -self.WALK_SPEED if self.facing_left else self.WALK_SPEED
             super().update(tilemap, movement=(walk_dir, 0))
@@ -391,7 +383,6 @@ class Slime(PhysicsEntity):
 
     def render(self, surf, offset=(0, 0)):
         img = self.animation.img().copy()
-        # flash white when hurt
         if self.hurt_cooldown > 0:
             white_overlay = pygame.Surface(img.get_size())
             white_overlay.fill((255, 255, 255))

@@ -16,7 +16,7 @@ def load_campfire_images():
 
 
 class Campfire:
-    HEAL_INTERVAL = 60   # heal every 60 frames (1 second) while near
+    HEAL_INTERVAL = 60  
     HEAL_AMOUNT   = 15
 
     def __init__(self, game, pos):

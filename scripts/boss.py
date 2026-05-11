@@ -11,7 +11,7 @@ class Projectile:
     def __init__(self, frames, pos, direction):
         self.frames = frames
         self.pos = list(pos)
-        self.direction = direction  # 1 = right, -1 = left
+        self.direction = direction  
 
         self.frame = 0
         self.frame_timer = 0
@@ -39,7 +39,6 @@ class Projectile:
 
 
 def _load_sorted(folder):
-    # Keep legacy behavior: sorted by digits in filename.
     import os
 
     files = sorted(
@@ -64,7 +63,6 @@ class Boss:
     ATTACK_DMG = 5
     RANGE_COOLDOWN = 120
 
-    # 2nd-form special attack settings
     SPCL_RANGE = 60
     SPCL_DMG = 30
     SPCL_COOLDOWN = 180
@@ -81,12 +79,9 @@ class Boss:
 
         self.facing_left = False
 
-        # movement base (match your previous boss logic)
-        # Using same ground/platform assumptions as other code.
         self.base_y = self.game.ground_y * 32 - self.size[1] - 80
         self.float_timer = 0
 
-        # AI state
         self.phase = 1
         self.transforming = False
         self.attacking = False
@@ -98,8 +93,6 @@ class Boss:
         self.spcl_attacking = False
         self.spcl_cd = 0
 
-        # animations
-        # idle sheet slicing
         self.anim_offset = (-10, -30)
 
         idle_sheet_path = 'data/images/BOSS/boss_idle/bossidle.Sheet (2).png'
@@ -160,7 +153,7 @@ class Boss:
             self.animation = Animation(self.anim_death.images, img_dur=8, loop=False)
             return
 
-        if self.phase == 1 and self.hp <= self.MAX_HP // 2:
+        if self.phase == 1 and self.hp <= self.MAX_HP // 1.5:
             self.phase = 2
             self.transforming = True
             self.attacking = False
@@ -176,11 +169,9 @@ class Boss:
         dx = player.pos[0] - self.pos[0]
         self.facing_left = dx < 0
 
-        # vertical float
         self.float_timer += self.FLOAT_FREQ
         self.pos[1] = self.base_y + math.sin(self.float_timer) * self.FLOAT_AMP
 
-        # cooldown ticks
         if self.hurt_cooldown > 0:
             self.hurt_cooldown -= 1
         if self.range_cd > 0:
@@ -188,7 +179,6 @@ class Boss:
         if self.spcl_cd > 0:
             self.spcl_cd -= 1
 
-        # projectiles
         player_rect = player.rect()
         for proj in self.projectiles[:]:
             proj.update()
@@ -199,14 +189,12 @@ class Boss:
                 proj.dead = True
         self.projectiles = [p for p in self.projectiles if not p.dead]
 
-        # death animation
         if self.dying:
             self.animation.update()
             if self.animation.done:
                 self.dead = True
             return
 
-        # transformation
         if self.transforming:
             self.animation.update()
             if self.animation.done:
@@ -214,7 +202,6 @@ class Boss:
                 self.animation = self.anim_phase2
             return
 
-        # 2nd-form special
         if self.spcl_attacking:
             self.animation.update()
 
@@ -233,7 +220,6 @@ class Boss:
                 self.animation = self.anim_phase2
             return
 
-        # phase-1 ranged
         if self.range_attacking:
             self.animation.update()
             total = len(self.anim_range.images)
@@ -250,7 +236,6 @@ class Boss:
                 self.animation = self.anim_idle
             return
 
-        # phase-1 melee
         if self.attacking:
             self.animation.update()
             total_frames = len(self.anim_attack.images)
@@ -267,7 +252,6 @@ class Boss:
                 self.animation = self.anim_idle
             return
 
-        # idle decision / chasing
         dist = abs(dx)
 
         if self.phase == 2:

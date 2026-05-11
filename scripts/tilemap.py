@@ -76,7 +76,7 @@ class Tilemap:
     def render(self, surf, offset=(0, 0), hide_spawners=True):
         for tile in self.offgrid_tiles:
             if hide_spawners and tile['type'] in ('spawners', 'portal', 'campfire', 'boss_spawner'):
-                continue  # editor-only markers, handled separately in game
+                continue  
             surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] - offset[0], tile['pos'][1]- offset[1]))
 
         for x in range(offset[0] // self.tile_size, (offset[0] + surf.get_width()) // self.tile_size + 1 ):

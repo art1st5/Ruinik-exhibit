@@ -78,7 +78,6 @@ class Editor:
             current_tile_img = self.assets[self.tile_list[self.tile_group]][self.tile_variant].copy()
             current_tile_img.set_alpha(1000)
 
-            # spawners and portals are always placed off-grid
             if self.tile_list[self.tile_group] in ('spawners', 'portal', 'campfire', 'boss_spawner'):
                 self.ongrid = False
 

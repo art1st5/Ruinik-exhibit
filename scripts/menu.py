@@ -8,16 +8,14 @@ class Menu:
     OPTIONS = 'options'
 
     def __init__(self, screen, display):
-        self.screen  = screen   # 1280x720 — text drawn here (no scaling)
-        self.display = display  # 320x180  — not used for menu drawing
+        self.screen  = screen  
+        self.display = display  
 
         sw, sh = screen.get_width(), screen.get_height()
 
-        # background scaled to full screen size
         self.bg = pygame.image.load(BASE_PATH + 'menu/MAIN_MENU.png').convert()
         self.bg = pygame.transform.scale(self.bg, (sw, sh))
 
-        # logo scaled to ~40% of screen width, keep aspect ratio
         self.logo_raw = pygame.image.load(BASE_PATH + 'menu/logo-sample(1).png').convert_alpha()
         lw, lh = self.logo_raw.get_size()
         max_w  = int(sw * 0.40)
@@ -34,18 +32,15 @@ class Menu:
         self.font_credit = pygame.font.SysFont('colosas', 20)
         self.font_hint   = pygame.font.SysFont('colosas', 18)
 
-    # ------------------------------------------------------------------ #
     def _draw_main(self):
         sw, sh = self.screen.get_width(), self.screen.get_height()
         cx = sw // 2
 
         self.screen.blit(self.bg, (0, 0))
 
-        # logo centered near top
         logo_rect = self.logo.get_rect(centerx=cx, top=40)
         self.screen.blit(self.logo, logo_rect)
 
-        # menu items below logo
         start_y = logo_rect.bottom + 60
         spacing = 120
 
@@ -73,7 +68,6 @@ class Menu:
         self.screen.blit(msg,  msg.get_rect(center=(cx, cy - 20)))
         self.screen.blit(hint, hint.get_rect(center=(cx, cy + 20)))
 
-    # ------------------------------------------------------------------ #
     def run(self):
         clock  = pygame.time.Clock()
         sw     = self.screen.get_width()

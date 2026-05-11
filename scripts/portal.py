@@ -6,7 +6,7 @@ class Portal:
     def __init__(self, game, pos, active=True):
         self.game = game
         self.pos = list(pos)
-        self.active = active  # False = decorative only, no interaction
+        self.active = active  
         self.animation = Animation(load_images('portal'), img_dur=8, loop=True)
         img = self.animation.img()
         self.size = (img.get_width(), img.get_height())
@@ -19,7 +19,6 @@ class Portal:
 
     def render(self, surf, offset=(0, 0)):
         img = self.animation.img()
-        # slightly dimmed if inactive
         if not self.active:
             img = img.copy()
             img.set_alpha(140)
