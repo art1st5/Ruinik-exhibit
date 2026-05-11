@@ -27,6 +27,9 @@ class Game:
         self.boss_font = pygame.font.SysFont('Arial', 12, bold=True)
         self.boss_defeated_font = pygame.font.SysFont('Arial', 16, bold=True)
         self.boss_defeated_timer = 0
+        
+        self.death_font = pygame.font.SysFont('Arial', 64, bold=True)
+        self.option_font = pygame.font.SysFont('Arial', 32, bold=True)
 
         self.movement = [False, False]
 
@@ -92,11 +95,11 @@ class Game:
             'sword/attack': Animation(load_images('PLAYER/sword_mode/attack_sword'), img_dur=3, loop=False),
             'sword/attack_left': Animation(load_images('PLAYER/sword_mode/sword_attack_left'), img_dur=3, loop=False),
 
-            'slime/idle' : Animation(load_images('slime/slime_walking_idle'), img_dur=9),
-            'slime/idle_left' : Animation(load_images('slime/slime_walking_idle_left'), img_dur=9),
-            'slime/attack' : Animation(load_images('slime/slime_attack'), img_dur=11),
-            'slime/attack_left' : Animation(load_images('slime/slime_attack_left'), img_dur=11),
-            'slime/death' : Animation(load_images('slime/slime_death'), img_dur=8, loop=False),
+            'slime/idle' : Animation(load_images('slime/slime_walking_idle'), img_dur=5),
+            'slime/idle_left' : Animation(load_images('slime/slime_walking_idle_left'), img_dur=5),
+            'slime/attack' : Animation(load_images('slime/slime_attack'), img_dur=7),
+            'slime/attack_left' : Animation(load_images('slime/slime_attack_left'), img_dur=5),
+            'slime/death' : Animation(load_images('slime/slime_death'), img_dur= 5, loop=False),
 
 
         
@@ -134,6 +137,12 @@ class Game:
         self.bg_layers_back_scaled  = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_layers_back']]
         self.bg_layers_front_scaled = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_layers_front']]
 
+
+    def restart_game(self):
+        self.player = Player(self, (180, 300), (12, 28))
+        self.current_level = 0
+        self.movement = [False, False]
+        self.load_level(self.levels[self.current_level])
 
     def load_level(self, map_path):
         self.tilemap.load(map_path)
@@ -368,7 +377,21 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                    quit()
+                    sys.exit()
+
+                if self.player.dead:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        mx, my = pygame.mouse.get_pos()
+                        screen_w, screen_h = self.screen.get_size()
+                        restart_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 20, 200, 40)
+                        exit_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
+                        if restart_rect.collidepoint((mx, my)):
+                            self.restart_game()
+                        elif exit_rect.collidepoint((mx, my)):
+                            pygame.quit()
+                            sys.exit()
+                    continue
+
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         self.player.sword_attack()
@@ -413,6 +436,29 @@ class Game:
             scaled_display = pygame.transform.scale(self.display, (scaled_width, scaled_height))
 
             self.screen.blit(scaled_display, (0, 0))            
+
+            if self.player.dead:
+                overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+                overlay.fill((0, 0, 0, 150))
+                self.screen.blit(overlay, (0, 0))
+
+                screen_w, screen_h = self.screen.get_size()
+                
+                death_text = self.death_font.render("YOU DIED", True, (220, 20, 20))
+                self.screen.blit(death_text, (screen_w//2 - death_text.get_width()//2, screen_h//2 - 80))
+                
+                mx, my = pygame.mouse.get_pos()
+                restart_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 20, 200, 40)
+                exit_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
+                
+                r_color = (255, 255, 255) if restart_rect.collidepoint((mx, my)) else (180, 180, 180)
+                e_color = (255, 255, 255) if exit_rect.collidepoint((mx, my)) else (180, 180, 180)
+                
+                restart_text = self.option_font.render("Restart", True, r_color)
+                exit_text = self.option_font.render("Exit", True, e_color)
+                
+                self.screen.blit(restart_text, (screen_w//2 - restart_text.get_width()//2, screen_h//2 + 20))
+                self.screen.blit(exit_text, (screen_w//2 - exit_text.get_width()//2, screen_h//2 + 80))
 
             pygame.display.update()
             self.clock.tick(60)
