@@ -9,8 +9,11 @@ def load_image(path, scale= None):
     
 def load_images(path, scale = None):
     images = []
-    for img_name in os.listdir (BASE_PATH + path):
-        images.append(load_image(path + '/' + img_name))
+    for img_name in os.listdir(BASE_PATH + path):
+        img = load_image(path + '/' + img_name)
+        if scale:
+            img = pygame.transform.scale(img, scale)
+        images.append(img)
     return images
 
 class Animation:

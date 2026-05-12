@@ -5,7 +5,7 @@ import sys
 from scripts.utils import load_images
 from scripts.tilemap import Tilemap
 
-RENDER_SCALE = 2.0
+RENDER_SCALE = 1.0
 
 
 class Editor:
@@ -14,7 +14,7 @@ class Editor:
         pygame.display.set_caption("editor")
         self.screen = pygame.display.set_mode((1280, 720))
         self.running = True
-        self.display = pygame.Surface((640, 360))
+        self.display = pygame.Surface((1280, 720))
 
 
         self.clock = pygame.time.Clock()
@@ -24,6 +24,8 @@ class Editor:
 
         self.assets = { 
             'grass': load_images('tiles/grass'),
+            'castle': load_images('tiles/castle', scale=(32, 32)),
+            'walls': load_images('tiles/walls'),
             'clouds': load_images('clouds'),
             'decor': load_images('tiles/decor'),
             'large_decor':load_images('tiles/large_decor'),
@@ -56,10 +58,10 @@ class Editor:
         self.ongrid = True
 
         self.ground_y = 11
-        self.zoom = 2.0
+        self.zoom = 1
     def run(self):  
         while True:
-            self.display.fill(("Black"))
+            self.display.fill((69,69,69))
             
 
             self.scroll[0] += (self.movement[1] - self.movement[0]) * 4

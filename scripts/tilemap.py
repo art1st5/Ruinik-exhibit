@@ -15,7 +15,7 @@ AUTOTILE_MAP = {
 }
 
 NEIGHBOR_OFFSET = [(-1, 0), (-1, -1 ), (0,-1), (1, -1), (1, 0), (0, 0), ( -1, 1), (0,1), (1, 1)]
-PHYSICS_TILES = {'grass'}
+PHYSICS_TILES = {'grass', 'castle'}
 AUTOTILE_TYPES = {'grass'}
 
 class Tilemap:
@@ -79,11 +79,22 @@ class Tilemap:
                 continue  
             surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] - offset[0], tile['pos'][1]- offset[1]))
 
-        for x in range(offset[0] // self.tile_size, (offset[0] + surf.get_width()) // self.tile_size + 1 ):
-            for y in range(offset[1] // self.tile_size, (offset[1] + surf.get_height()) // self.tile_size + 1 ):
-                loc  = str(x) + ';' +  str(y)
+        # first pass — walls (background, no collision)
+        for x in range(offset[0] // self.tile_size - 1, (offset[0] + surf.get_width()) // self.tile_size + 2):
+            for y in range(offset[1] // self.tile_size - 1, (offset[1] + surf.get_height()) // self.tile_size + 2):
+                loc = str(x) + ';' + str(y)
                 if loc in self.tilemap:
                     tile = self.tilemap[loc]
-                    surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] * self.tile_size - offset[0],  tile['pos'][1] * self.tile_size - offset[1]))
+                    if tile['type'] == 'walls':
+                        surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] * self.tile_size - offset[0], tile['pos'][1] * self.tile_size - offset[1]))
+
+        # second pass — all other tiles (drawn on top of walls)
+        for x in range(offset[0] // self.tile_size - 1, (offset[0] + surf.get_width()) // self.tile_size + 2):
+            for y in range(offset[1] // self.tile_size - 1, (offset[1] + surf.get_height()) // self.tile_size + 2):
+                loc = str(x) + ';' + str(y)
+                if loc in self.tilemap:
+                    tile = self.tilemap[loc]
+                    if tile['type'] != 'walls':
+                        surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] * self.tile_size - offset[0], tile['pos'][1] * self.tile_size - offset[1]))
 
 

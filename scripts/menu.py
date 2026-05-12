@@ -4,8 +4,21 @@ import sys
 BASE_PATH = 'data/images/'
 
 class Menu:
-    MAIN    = 'main'
-    OPTIONS = 'options'
+    MAIN     = 'main'
+    OPTIONS  = 'options'
+    KEYBINDS = 'keybinds'
+
+    KEYBIND_LINES = [
+        ("A / D",         "Move Left / Right"),
+        ("SPACE",         "Jump"),
+        ("E",             "Toggle Staff Mode"),
+        ("Q",             "Toggle Sword Mode"),
+        ("LEFT CLICK",    "Sword Attack  (Sword Mode)"),
+        ("LEFT SHIFT",    "Dash  (Staff Mode)"),
+        ("F",             "Enter Portal"),
+        ("H",             "Toggle Hitboxes  (Debug)"),
+        ("ESC",           "Pause / Resume"),
+    ]
 
     def __init__(self, screen, display):
         self.screen  = screen  
@@ -26,7 +39,7 @@ class Menu:
 
         self.state    = self.MAIN
         self.selected = 0
-        self.items    = ['Start Game', 'Options', 'Exit']
+        self.items    = ['Start Game', 'Options', 'Keybinds', 'Exit']
 
         self.font_item   = pygame.font.SysFont('colosas', 80)
         self.font_credit = pygame.font.SysFont('colosas', 20)
@@ -45,7 +58,7 @@ class Menu:
         spacing = 120
 
         for i, label in enumerate(self.items):
-            color  = (255, 220, 50) if i == self.selected else ("White")
+            color  = (0,0,0) if i == self.selected else ("White")
             prefix = '> ' if i == self.selected else '  '
             text   = self.font_item.render(prefix + label, True, color)
             rect   = text.get_rect(center=(cx, start_y + i * spacing))
@@ -68,6 +81,37 @@ class Menu:
         self.screen.blit(msg,  msg.get_rect(center=(cx, cy - 20)))
         self.screen.blit(hint, hint.get_rect(center=(cx, cy + 20)))
 
+    def _draw_keybinds(self):
+        sw, sh = self.screen.get_width(), self.screen.get_height()
+        cx = sw // 2
+
+        self.screen.blit(self.bg, (0, 0))
+
+        # dark semi-transparent panel
+        panel_w, panel_h = 600, 520
+        panel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 180))
+        self.screen.blit(panel, (cx - panel_w // 2, sh // 2 - panel_h // 2))
+
+        title = self.font_item.render('Keybinds', True, (255, 220, 50))
+        self.screen.blit(title, title.get_rect(center=(cx, sh // 2 - panel_h // 2 + 40)))
+
+        font_kb = pygame.font.SysFont('Arial', 22, bold=True)
+        row_h = 38
+        start_y = sh // 2 - panel_h // 2 + 110
+        key_x   = cx - 260
+        desc_x  = cx - 60
+
+        for i, (key, desc) in enumerate(self.KEYBIND_LINES):
+            y = start_y + i * row_h
+            key_surf  = font_kb.render(key,  True, (255, 220, 80))
+            desc_surf = font_kb.render(desc, True, (220, 220, 220))
+            self.screen.blit(key_surf,  (key_x,  y))
+            self.screen.blit(desc_surf, (desc_x, y))
+
+        hint = self.font_hint.render('Press ESC to go back', True, (180, 180, 180))
+        self.screen.blit(hint, hint.get_rect(center=(cx, sh // 2 + panel_h // 2 - 20)))
+
     def run(self):
         clock  = pygame.time.Clock()
         sw     = self.screen.get_width()
@@ -87,8 +131,9 @@ class Menu:
                         elif event.key == pygame.K_RETURN:
                             if self.selected == 0: return 'start'
                             elif self.selected == 1: self.state = self.OPTIONS
-                            elif self.selected == 2: pygame.quit(); sys.exit()
-                    elif self.state == self.OPTIONS:
+                            elif self.selected == 2: self.state = self.KEYBINDS
+                            elif self.selected == 3: pygame.quit(); sys.exit()
+                    elif self.state in (self.OPTIONS, self.KEYBINDS):
                         if event.key == pygame.K_ESCAPE:
                             self.state = self.MAIN
 
@@ -106,12 +151,15 @@ class Menu:
                     if self.state == self.MAIN:
                         if self.selected == 0: return 'start'
                         elif self.selected == 1: self.state = self.OPTIONS
-                        elif self.selected == 2: pygame.quit(); sys.exit()
+                        elif self.selected == 2: self.state = self.KEYBINDS
+                        elif self.selected == 3: pygame.quit(); sys.exit()
 
             if self.state == self.MAIN:
                 self._draw_main()
-            else:
+            elif self.state == self.OPTIONS:
                 self._draw_options()
+            else:
+                self._draw_keybinds()
 
             pygame.display.update()
             clock.tick(60)
