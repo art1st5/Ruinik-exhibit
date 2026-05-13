@@ -6,7 +6,7 @@ from scripts.utils import Animation, load_images
 
 class Projectile:
     SPEED = 2.8
-    DMG = 30
+    DMG = 60
 
     def __init__(self, frames, pos, direction):
         self.frames = frames
@@ -81,10 +81,10 @@ class Boss:
     FLOAT_AMP = 8
     FLOAT_FREQ = 0.04
 
-    ATTACK_RANGE = 40
-    RANGE_THRESHOLD = 120
+    ATTACK_RANGE = 80
+    RANGE_THRESHOLD = 100
 
-    ATTACK_DMG = 40
+    ATTACK_DMG = 50
     RANGE_COOLDOWN = 90
 
     SPCL_RANGE = 40
@@ -95,7 +95,7 @@ class Boss:
     TELEPORT_COOLDOWN = 300
 
     FLOAT_SPEED_P2 = 1
-    P2_HEAL_PER_SEC = 30
+    P2_HEAL_PER_SEC = 35
     P2_DMG_REDUCTION = 0.3       
     P2_SLIME_INTERVAL = 1800     
 
@@ -131,7 +131,7 @@ class Boss:
         self.teleport_flash = 0
 
         self.slime_spawn_cd = 0  
-        self.heal_accumulator = 0.0  #
+        self.heal_accumulator = 0.0  
         self.anim_offset = (-(self.RENDER_W - self.size[0]) // 2, 0)  
 
         idle_sheet_path = 'data/images/BOSS/boss_idle/bossidle.Sheet (2).png'
@@ -234,7 +234,7 @@ class Boss:
             self.game.boss_defeated_timer = 180
             return
 
-        if self.phase == 1 and self.hp <= self.MAX_HP // 3.5:
+        if self.phase == 1 and self.hp <= self.MAX_HP // 3:
             self.phase = 2
             self.transforming = True
             self.transform_cutscene = True

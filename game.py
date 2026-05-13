@@ -21,8 +21,8 @@ class Game:
         self.display = None  
 
         self.clock = pygame.time.Clock()
-        self.zoom = 2.5
-        self.level_zoom = [2.5 , 2.5] 
+        self.zoom = 4
+        self.level_zoom = [4 , 2.5] 
         self._update_display_surface()
         self.show_hitboxes = False
         self.barrier_warning_timer = 0  
@@ -458,12 +458,12 @@ class Game:
                     attack_x = p.pos[0] - attack_w if p.facing_left else p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1] - attack_h + p.size[1], attack_w, attack_h)
                     if attack_rect.colliderect(boss.rect()):
-                        dmg = 500 if boss.phase == 2 else 80
+                        dmg = 80 if boss.phase == 2 else 50
                         boss.take_damage(dmg)
 
                 if self.player.dashing > 0 and self.player.mode == "staff":
                     if id(boss) not in self.player.dash_hit and self.player.rect().colliderect(boss.rect()):
-                        dmg = 15 if boss.phase == 2 else 80
+                        dmg = 40 if boss.phase == 2 else 60
                         boss.take_damage(dmg)
                         self.player.dash_hit.add(id(boss))
 
