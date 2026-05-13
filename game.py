@@ -21,18 +21,19 @@ class Game:
         self.display = None  
 
         self.clock = pygame.time.Clock()
-        self.zoom = 4
-        self.level_zoom = [4 , 2.5] 
+        self.zoom = 2.5
+        self.level_zoom = [2.5 , 2.5] 
         self._update_display_surface()
         self.show_hitboxes = False
-        self.hint_font = pygame.font.SysFont('Arial', 12,  bold = True) 
-        self.boss_font = pygame.font.SysFont('Arial', 12, bold=True)
-        self.boss_defeated_font = pygame.font.SysFont('Arial', 16, bold=True)
+        self.barrier_warning_timer = 0  
+        self.hint_font = pygame.font.Font('fonts/PixelPurl.TTF', 12) 
+        self.boss_font = pygame.font.Font('fonts/PixelPurl.ttf', 12)
+        self.boss_defeated_font = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 16)
         self.boss_defeated_timer = 0
         
-        self.death_font = pygame.font.SysFont('Arial', 64, bold=True)
-        self.option_font = pygame.font.SysFont('Arial', 32, bold=True)
-        self.pause_font = pygame.font.SysFont('Arial', 28, bold=True)
+        self.death_font = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 64)
+        self.option_font = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 32)
+        self.pause_font = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 28)
 
         self.paused = False
         pause_btn_raw = pygame.image.load('data/images/UI/pause.png').convert_alpha()
@@ -44,7 +45,7 @@ class Game:
         self.assets = { 
             'grass': load_images('tiles/grass'),
             'castle': load_images('tiles/castle', scale=(32, 32)),
-            'walls': load_images('tiles/walls'),
+            'walls': load_images('tiles/walls', scale = (32,32)),
             'player': load_image('PLAYER/NATIAN.png'),
             'spawners': load_images('spawners'),
             'portal': load_images('portal'),
@@ -61,15 +62,25 @@ class Game:
             'large_decor':load_images('tiles/large_decor'),
 
             'bg_layers_back': [
+                (pygame.transform.scale(pygame.image.load('data/images/maps/0.png').convert_alpha(), (320, 180)), 0.0),
                 (pygame.transform.scale(pygame.image.load('data/images/maps/1.png').convert_alpha(), (320, 180)), 0.05),
                 (pygame.transform.scale(pygame.image.load('data/images/maps/2.png').convert_alpha(), (320, 180)), 0.1),
-                (pygame.transform.scale(pygame.image.load('data/images/maps/3.png').convert_alpha(), (320, 180)), 0.15),
-                (pygame.transform.scale(pygame.image.load('data/images/maps/4.png').convert_alpha(), (320, 180)), 0.2),
             ],
             'bg_layers_front': [
-                (pygame.transform.scale(pygame.image.load('data/images/maps/5.png').convert_alpha(), (320, 180)), 0.25),
-                (pygame.transform.scale(pygame.image.load('data/images/maps/6.png').convert_alpha(), (320, 180)), 0.3),
-                (pygame.transform.scale(pygame.image.load('data/images/maps/7.png').convert_alpha(), (320, 180)), 0.35),
+                (pygame.transform.scale(pygame.image.load('data/images/maps/3.png').convert_alpha(), (320, 180)), 0.2),
+                (pygame.transform.scale(pygame.image.load('data/images/maps/4.png').convert_alpha(), (320, 180)), 0.3),
+            ],
+            # map_home layers for map.json (level 0)
+            'bg_home_back': [
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/0.png').convert_alpha(), (320, 180)), 0.0),
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/1.png').convert_alpha(), (320, 180)), 0.05),
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/2.png').convert_alpha(), (320, 180)), 0.1),
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/3.png').convert_alpha(), (320, 180)), 0.15),
+            ],
+            'bg_home_front': [
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/4.png').convert_alpha(), (320, 180)), 0.2),
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/5.png').convert_alpha(), (320, 180)), 0.25),
+                (pygame.transform.scale(pygame.image.load('data/images/map_home/6.png').convert_alpha(), (320, 180)), 0.3),
             ],
             'player/idle': Animation(load_images('PLAYER/idle'), img_dur=12),
             'player/idle_left':Animation(load_images('PLAYER/idleLEFT'),img_dur=12),
@@ -118,10 +129,11 @@ class Game:
 
        # self.clouds = Clouds(self.assets['clouds'], count = 3)
 
-        self.player = Player(self, (180, 300), (12, 28)) 
+        self.player = Player(self, (180, 200), (12, 28)) 
 
         self.levels = ['map.json', 'map1.json']  
         self.current_level = 0
+        self.level_spawns = [(180, 300), (180, 160)]  
 
         self.tilemap = Tilemap(self, tile_size=32)
         self.tilemap.load(self.levels[self.current_level])
@@ -145,8 +157,102 @@ class Game:
         sw, sh = self.screen.get_size()
         self.bg_layers_back_scaled  = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_layers_back']]
         self.bg_layers_front_scaled = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_layers_front']]
+        self.bg_home_back_scaled  = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_home_back']]
+        self.bg_home_front_scaled = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_home_front']]
+        self._set_bg_for_level()
 
 
+
+    def _play_boss_transform_cutscene(self, boss):
+        """Zoom into boss, show dialogue, zoom back out."""
+        clock = pygame.time.Clock()
+        sw, sh = self.screen.get_size()
+        dialogue_font = pygame.font.Font('fonts/PixelPurl.ttf', 50)
+
+        ZOOM_IN_FRAMES  = 70
+        HOLD_FRAMES     = 90   
+        ZOOM_OUT_FRAMES = 100
+        TARGET_ZOOM     = self.zoom * 3.0
+        DIALOGUE        = "ENOUGH GAMES!!"
+
+        def render_frame(current_zoom, text_alpha):
+            # centre camera on boss
+            boss_cx = boss.pos[0] + boss.size[0] // 2
+            boss_cy = boss.pos[1] + boss.size[1] // 2
+            scroll_x = boss_cx - self.display.get_width() // 2
+            scroll_y = boss_cy - self.display.get_height() // 2
+            rs = (int(scroll_x), int(scroll_y))
+
+            self.display.fill((0, 0, 0, 0))
+            for layer_img, speed in self.active_bg_back:
+                ox = int(scroll_x * speed) % sw
+                self.screen.blit(layer_img, (-ox, 0))
+                self.screen.blit(layer_img, (sw - ox, 0))
+            for layer_img, speed in self.active_bg_front:
+                ox = int(scroll_x * speed) % sw
+                self.screen.blit(layer_img, (-ox, 0))
+                self.screen.blit(layer_img, (sw - ox, 0))
+            self.tilemap.render(self.display, offset=rs)
+            boss.render(self.display, offset=rs)
+
+            scaled_w = int(self.display.get_width() * current_zoom)
+            scaled_h = int(self.display.get_height() * current_zoom)
+            scaled = pygame.transform.scale(self.display, (scaled_w, scaled_h))
+            bx = (sw - scaled_w) // 2
+            by = (sh - scaled_h) // 2
+            self.screen.blit(scaled, (bx, by))
+
+            if text_alpha > 0:
+                txt = dialogue_font.render(DIALOGUE, True, (165,6,54))
+                txt.set_alpha(text_alpha)
+                self.screen.blit(txt, txt.get_rect(center=(sw // 2, sh // 2 + 200)))
+
+            pygame.display.update()
+
+        # suppress hurt flash during cutscene
+        saved_hurt = boss.hurt_cooldown
+        boss.hurt_cooldown = 0
+
+        # zoom in
+        for f in range(ZOOM_IN_FRAMES):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit(); sys.exit()
+            t = f / ZOOM_IN_FRAMES
+            t_e = 1 - (1 - t) ** 2
+            render_frame(self.zoom + (TARGET_ZOOM - self.zoom) * t_e, 0)
+            clock.tick(60)
+
+        # hold with dialogue
+        for f in range(HOLD_FRAMES):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit(); sys.exit()
+            alpha = min(255, f * 10)
+            render_frame(TARGET_ZOOM, alpha)
+            clock.tick(60)
+
+        # zoom out
+        for f in range(ZOOM_OUT_FRAMES):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit(); sys.exit()
+            t = f / ZOOM_OUT_FRAMES
+            t_e = 1 - (1 - t) ** 2
+            alpha = max(0, 255 - f * (255 // ZOOM_OUT_FRAMES))
+            render_frame(TARGET_ZOOM + (self.zoom - TARGET_ZOOM) * t_e, alpha)
+            clock.tick(60)
+
+        # restore hurt cooldown
+        boss.hurt_cooldown = saved_hurt
+
+    def _set_bg_for_level(self):
+        if self.current_level == 0:
+            self.active_bg_back  = self.bg_home_back_scaled
+            self.active_bg_front = self.bg_home_front_scaled
+        else:
+            self.active_bg_back  = self.bg_layers_back_scaled
+            self.active_bg_front = self.bg_layers_front_scaled
 
     def _update_display_surface(self):
         sw, sh = self.screen.get_size()
@@ -155,7 +261,7 @@ class Game:
         self.display = pygame.Surface((dw, dh), pygame.SRCALPHA)
 
     def restart_game(self):
-        self.player = Player(self, (180, 300), (12, 28))
+        self.player = Player(self, (180, 160), (12, 28))
         self.current_level = 0
         self.movement = [False, False]
         self.zoom = self.level_zoom[0]
@@ -166,6 +272,7 @@ class Game:
         self.tilemap.load(map_path)
         self.zoom = self.level_zoom[self.current_level]
         self._update_display_surface()
+        self._set_bg_for_level()
         self.slimes = []
         self.portals = []
         self.campfires = []
@@ -179,7 +286,7 @@ class Game:
                 self.campfires.append(Campfire(self, (tile['pos'][0], tile['pos'][1])))
             elif tile['type'] == 'boss_spawner':
                 self.bosses.append(Boss(self, (tile['pos'][0], tile['pos'][1])))
-        self.player.pos = [180, 300]
+        self.player.pos = list(self.level_spawns[self.current_level])
         self.player.velocity = [0, 0]
         self.scroll = [0, 0]
 
@@ -190,11 +297,10 @@ class Game:
         from scripts.cutscene import Cutscene
         Cutscene(self.screen).run()
 
-        # zoom-out transition into gameplay
-        # renders one frame of the game world then zooms from high zoom to normal
-        ZOOM_START  = self.zoom * 4  # start zoomed in 3x
-        ZOOM_END    = self.zoom  * 3        # end at normal zoom
-        ZOOM_FRAMES = 80      # duration — adjust this (90 = 1.5 sec)
+    
+        ZOOM_START  = self.zoom * 2  
+        ZOOM_END    = self.zoom      
+        ZOOM_FRAMES = 130    
 
         for f in range(ZOOM_FRAMES):
             for event in pygame.event.get():
@@ -203,8 +309,7 @@ class Game:
                     sys.exit()
 
             t = f / ZOOM_FRAMES
-            # ease out: fast at start, slow at end
-            t_eased = 1 - (1 - t) ** 2
+            t_eased = 1 - (1 - t) ** 5
             current_zoom = ZOOM_START + (ZOOM_END - ZOOM_START) * t_eased
 
             # render one game frame at current zoom
@@ -212,16 +317,15 @@ class Game:
             self.scroll[1] = self.player.pos[1] + self.player.size[1] / 2 - self.display.get_height() / 2 - 40
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
-            self.display.fill((0, 0, 0, 0))
             screen_w, screen_h = self.screen.get_size()
 
-            for layer_img, speed in self.bg_layers_back_scaled:
+            for layer_img, speed in self.active_bg_back:
                 offset_x = int(self.scroll[0] * speed) % screen_w
-                self.screen.blit(layer_img, (-offset_x, 0))
+                self.screen.blit(layer_img, (-offset_x, -50))
                 self.screen.blit(layer_img, (screen_w - offset_x, 0))
-            for layer_img, speed in self.bg_layers_front_scaled:
+            for layer_img, speed in self.active_bg_front:
                 offset_x = int(self.scroll[0] * speed) % screen_w
-                self.screen.blit(layer_img, (-offset_x, 0))
+                self.screen.blit(layer_img, (-offset_x, -50))
                 self.screen.blit(layer_img, (screen_w - offset_x, 0))
 
             self.tilemap.render(self.display, offset=render_scroll)
@@ -245,14 +349,12 @@ class Game:
 
             screen_w, screen_h = self.screen.get_size()
 
-            for layer_img, speed in self.bg_layers_back_scaled:
+            for layer_img, speed in self.active_bg_back:
                 offset_x = int(self.scroll[0] * speed) % screen_w
                 self.screen.blit(layer_img, (-offset_x, 0))
                 self.screen.blit(layer_img, (screen_w - offset_x, 0))
 
-      
-
-            for layer_img, speed in self.bg_layers_front_scaled:
+            for layer_img, speed in self.active_bg_front:
                 offset_x = int(self.scroll[0] * speed) % screen_w
                 self.screen.blit(layer_img, (-offset_x, 0))
                 self.screen.blit(layer_img, (screen_w - offset_x, 0))
@@ -282,6 +384,23 @@ class Game:
                 hy = int(self.player.pos[1] - render_scroll[1] - 12)
                 self.display.blit(hint_surf, (hx, hy))
 
+            # barrier warning — shows when player HP drops to 25%
+            if self.player.hp / self.player.max_hp <= 0.25 and not self.player.dead:
+                if self.barrier_warning_timer == 0:
+                    self.barrier_warning_timer = 180  # show for 3 seconds on first trigger
+                self.barrier_warning_timer = max(self.barrier_warning_timer, 1)  # keep showing while at low HP
+            else:
+                if self.barrier_warning_timer > 0:
+                    self.barrier_warning_timer -= 1
+
+            if self.barrier_warning_timer > 0:
+                alpha = min(255, self.barrier_warning_timer * 4)
+                warn_surf = self.hint_font.render("No escape!", True, (255, 60, 60))
+                warn_surf.set_alpha(alpha)
+                wx = int(self.player.pos[0] - render_scroll[0] + self.player.size[0] // 2 - warn_surf.get_width() // 2)
+                wy = int(self.player.pos[1] - render_scroll[1] - 22)
+                self.display.blit(warn_surf, (wx, wy))
+
             all_clear = (all(s.dead for s in self.slimes) if self.slimes else True) and \
                         (all(b.dead for b in self.bosses) if self.bosses else True)
             self.near_portal = False
@@ -297,14 +416,18 @@ class Game:
                 campfire.update(player_near)
                 campfire.render(self.display, offset=render_scroll)
 
-            # player renders after portals/campfires so it always appears on top
             self.player.render(self.display, offset=render_scroll)
 
-            # hit effect — white tinted HIT.png aligned to player sprite
             if self.player.hurt_cooldown > 0:
                 hit_img = self.assets['hit_effect'].copy()
-                hit_img.fill((255, 255, 255), special_flags=pygame.BLEND_RGB_MULT)
-                hit_img.set_alpha(int(255 * (self.player.hurt_cooldown / 90)))
+                white = pygame.Surface(hit_img.get_size(), pygame.SRCALPHA)
+                for x in range(hit_img.get_width()):
+                    for y in range(hit_img.get_height()):
+                        a = hit_img.get_at((x, y))[3]
+                        if a > 0:
+                            white.set_at((x, y), (255, 255, 255, a))
+                hit_img = white
+                hit_img.set_alpha(int(255 * (self.player.hurt_cooldown / 60)))
                 hit_img = pygame.transform.scale(hit_img, (32, 32))
                 p = self.player
                 if p.mode == "sword" and p.action in ("idle", "idle_left"):
@@ -321,6 +444,10 @@ class Game:
                 boss.update() if not self.paused else None
                 boss.render(self.display, offset=render_scroll)
 
+                if boss.transform_cutscene:
+                    boss.transform_cutscene = False
+                    self._play_boss_transform_cutscene(boss)
+
                 if boss.dead:
                     self.bosses.remove(boss)
                     continue
@@ -331,11 +458,12 @@ class Game:
                     attack_x = p.pos[0] - attack_w if p.facing_left else p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1] - attack_h + p.size[1], attack_w, attack_h)
                     if attack_rect.colliderect(boss.rect()):
-                        boss.take_damage(80)
+                        dmg = 500 if boss.phase == 2 else 80
+                        boss.take_damage(dmg)
 
                 if self.player.dashing > 0 and self.player.mode == "staff":
                     if id(boss) not in self.player.dash_hit and self.player.rect().colliderect(boss.rect()):
-                        dmg = 15 if boss.phase == 2 else 50
+                        dmg = 15 if boss.phase == 2 else 80
                         boss.take_damage(dmg)
                         self.player.dash_hit.add(id(boss))
 
@@ -411,7 +539,7 @@ class Game:
                 # player attack rect
                 if self.player.attacking:
                     p = self.player
-                    attack_w, attack_h = 30, 30
+                    attack_w, attack_h = 20, 25
                     if p.facing_left:
                         attack_x = p.pos[0] - attack_w
                     else:
@@ -505,6 +633,18 @@ class Game:
 
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         mx, my = pygame.mouse.get_pos()
+
+                        if self.player.dead:
+                            screen_w, screen_h = self.screen.get_size()
+                            restart_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 20, 200, 40)
+                            menu_rect    = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
+                            if restart_rect.collidepoint(mx, my):
+                                self.restart_game()
+                            elif menu_rect.collidepoint(mx, my):
+                                main_menu = Menu(self.screen, self.display)
+                                main_menu.run()
+                            continue
+
                         # pause button click
                         if pause_btn_rect.collidepoint(mx, my):
                             self.paused = not self.paused
@@ -531,17 +671,6 @@ class Game:
                             continue
 
                 if self.paused:
-                    continue
-                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                        mx, my = pygame.mouse.get_pos()
-                        screen_w, screen_h = self.screen.get_size()
-                        restart_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 20, 200, 40)
-                        exit_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
-                        if restart_rect.collidepoint((mx, my)):
-                            self.restart_game()
-                        elif exit_rect.collidepoint((mx, my)):
-                            pygame.quit()
-                            sys.exit()
                     continue
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -609,7 +738,6 @@ class Game:
                     color = (255, 220, 80) if pygame.Rect(cx - 100, y - 20, 200, 40).collidepoint(mx, my) else (255, 255, 255)
                     txt = self.pause_font.render(label, True, color)
                     self.screen.blit(txt, txt.get_rect(center=(cx, y)))
-                # redraw pause button on top of overlay too
                 self.screen.blit(self.pause_btn_img, (pause_btn_rect.x, pause_btn_rect.y))
 
             if self.player.dead:
@@ -618,22 +746,22 @@ class Game:
                 self.screen.blit(overlay, (0, 0))
 
                 screen_w, screen_h = self.screen.get_size()
-                
+
                 death_text = self.death_font.render("YOU DIED", True, (220, 20, 20))
                 self.screen.blit(death_text, (screen_w//2 - death_text.get_width()//2, screen_h//2 - 80))
-                
+
                 mx, my = pygame.mouse.get_pos()
                 restart_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 20, 200, 40)
-                exit_rect = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
-                
+                menu_rect    = pygame.Rect(screen_w//2 - 100, screen_h//2 + 80, 200, 40)
+
                 r_color = (255, 255, 255) if restart_rect.collidepoint((mx, my)) else (180, 180, 180)
-                e_color = (255, 255, 255) if exit_rect.collidepoint((mx, my)) else (180, 180, 180)
-                
+                m_color = (255, 255, 255) if menu_rect.collidepoint((mx, my))    else (180, 180, 180)
+
                 restart_text = self.option_font.render("Restart", True, r_color)
-                exit_text = self.option_font.render("Exit", True, e_color)
-                
+                menu_text    = self.option_font.render("Menu",    True, m_color)
+
                 self.screen.blit(restart_text, (screen_w//2 - restart_text.get_width()//2, screen_h//2 + 20))
-                self.screen.blit(exit_text, (screen_w//2 - exit_text.get_width()//2, screen_h//2 + 80))
+                self.screen.blit(menu_text,    (screen_w//2 - menu_text.get_width()//2,    screen_h//2 + 80))
 
             pygame.display.update()
             self.clock.tick(60)

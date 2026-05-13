@@ -31,7 +31,7 @@ class Menu:
 
         self.logo_raw = pygame.image.load(BASE_PATH + 'menu/logo-sample(1).png').convert_alpha()
         lw, lh = self.logo_raw.get_size()
-        max_w  = int(sw * 0.40)
+        max_w  = int(sw * 0.60)
         scale  = min(max_w / lw, 1.0)
         self.logo = pygame.transform.smoothscale(
             self.logo_raw, (int(lw * scale), int(lh * scale))
@@ -41,9 +41,9 @@ class Menu:
         self.selected = 0
         self.items    = ['Start Game', 'Options', 'Keybinds', 'Exit']
 
-        self.font_item   = pygame.font.SysFont('colosas', 80)
-        self.font_credit = pygame.font.SysFont('colosas', 20)
-        self.font_hint   = pygame.font.SysFont('colosas', 18)
+        self.font_item   = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 80)
+        self.font_credit = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 20)
+        self.font_hint   = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 18)
 
     def _draw_main(self):
         sw, sh = self.screen.get_width(), self.screen.get_height()
@@ -54,11 +54,11 @@ class Menu:
         logo_rect = self.logo.get_rect(centerx=cx, top=40)
         self.screen.blit(self.logo, logo_rect)
 
-        start_y = logo_rect.bottom + 60
-        spacing = 120
+        start_y = logo_rect.bottom + 40
+        spacing = 70
 
         for i, label in enumerate(self.items):
-            color  = (0,0,0) if i == self.selected else ("White")
+            color  = (210,184, 115) if i == self.selected else (177,130,0)
             prefix = '> ' if i == self.selected else '  '
             text   = self.font_item.render(prefix + label, True, color)
             rect   = text.get_rect(center=(cx, start_y + i * spacing))
@@ -66,7 +66,7 @@ class Menu:
 
         credit = self.font_credit.render(
             'A game by Prado, De la Cruz, Cabardo, Ladislao, Marzal from 12-ITEM-01',
-            True, (0,0,0)
+            True, (0, 69, 41)
         )
         self.screen.blit(credit, (10, sh - credit.get_height() - 10))
 
@@ -96,7 +96,7 @@ class Menu:
         title = self.font_item.render('Keybinds', True, (255, 220, 50))
         self.screen.blit(title, title.get_rect(center=(cx, sh // 2 - panel_h // 2 + 40)))
 
-        font_kb = pygame.font.SysFont('Arial', 22, bold=True)
+        font_kb = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 22)
         row_h = 38
         start_y = sh // 2 - panel_h // 2 + 110
         key_x   = cx - 260

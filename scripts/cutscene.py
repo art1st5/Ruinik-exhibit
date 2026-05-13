@@ -10,7 +10,7 @@ CUTSCENE_LINES = [
     ("AND HIS FATE...", 70),
 ]
 
-FONT_NAME   = 'Arial'
+FONT_NAME   = 'fonts/PixelPurl.ttf'
 FONT_SIZE   = 32
 FONT_BOLD   = True
 TEXT_COLOR  = (220, 210, 180)   # warm parchment white
@@ -22,7 +22,7 @@ ALLOW_SKIP  = False
 class Cutscene:
     def __init__(self, screen):
         self.screen = screen
-        self.font   = pygame.font.SysFont(FONT_NAME, FONT_SIZE, bold=FONT_BOLD)
+        self.font   = pygame.font.Font(FONT_NAME, FONT_SIZE)
         self.clock  = pygame.time.Clock()
 
     def _render_line(self, text, alpha):
@@ -77,7 +77,6 @@ class Cutscene:
                     self._render_line(text, int(255 * (1 - f / FADE_FRAMES)))
                     self.clock.tick(60)
 
-        # brief black pause at the end
         self.screen.fill(BG_COLOR)
         pygame.display.update()
-        pygame.time.wait(300)
+        pygame.time.wait(160)

@@ -25,7 +25,7 @@ class Editor:
         self.assets = { 
             'grass': load_images('tiles/grass'),
             'castle': load_images('tiles/castle', scale=(32, 32)),
-            'walls': load_images('tiles/walls'),
+            'walls': load_images('tiles/walls', scale = (32,32)),
             'clouds': load_images('clouds'),
             'decor': load_images('tiles/decor'),
             'large_decor':load_images('tiles/large_decor'),
@@ -64,8 +64,8 @@ class Editor:
             self.display.fill((69,69,69))
             
 
-            self.scroll[0] += (self.movement[1] - self.movement[0]) * 4
-            self.scroll[1] += (self.movement[3] - self.movement[2]) * 4
+            self.scroll[0] += (self.movement[1] - self.movement[0]) * 8
+            self.scroll[1] += (self.movement[3] - self.movement[2]) * 8
 
             
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))

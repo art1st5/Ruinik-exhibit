@@ -16,7 +16,11 @@ AUTOTILE_MAP = {
 
 NEIGHBOR_OFFSET = [(-1, 0), (-1, -1 ), (0,-1), (1, -1), (1, 0), (0, 0), ( -1, 1), (0,1), (1, 1)]
 PHYSICS_TILES = {'grass', 'castle'}
-AUTOTILE_TYPES = {'grass'}
+AUTOTILE_TYPES = {'grass', 'castle'}
+
+# walls variant that becomes solid when player HP <= 25%
+BARRIER_TILE_TYPE    = 'walls'
+BARRIER_TILE_VARIANT = 21
 
 class Tilemap:
     def __init__(self, game, tile_size= 32):
@@ -53,8 +57,15 @@ class Tilemap:
 
     def physics_rects_around(self, pos): 
         rects = []
+        player = self.game.player
+        barrier_active = (player.hp / player.max_hp) <= 0.25
+
         for tile in self.tiles_around(pos):
             if tile['type'] in PHYSICS_TILES:
+                rects.append(pygame.Rect(tile['pos'][0] * self.tile_size, tile['pos'][1] * self.tile_size, self.tile_size, self.tile_size))
+            elif (barrier_active
+                  and tile['type'] == BARRIER_TILE_TYPE
+                  and tile['variant'] == BARRIER_TILE_VARIANT):
                 rects.append(pygame.Rect(tile['pos'][0] * self.tile_size, tile['pos'][1] * self.tile_size, self.tile_size, self.tile_size))
         return rects
 
@@ -74,12 +85,7 @@ class Tilemap:
 
 
     def render(self, surf, offset=(0, 0), hide_spawners=True):
-        for tile in self.offgrid_tiles:
-            if hide_spawners and tile['type'] in ('spawners', 'portal', 'campfire', 'boss_spawner'):
-                continue  
-            surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] - offset[0], tile['pos'][1]- offset[1]))
-
-        # first pass — walls (background, no collision)
+        # pass 1 — walls (furthest back)
         for x in range(offset[0] // self.tile_size - 1, (offset[0] + surf.get_width()) // self.tile_size + 2):
             for y in range(offset[1] // self.tile_size - 1, (offset[1] + surf.get_height()) // self.tile_size + 2):
                 loc = str(x) + ';' + str(y)
@@ -88,7 +94,13 @@ class Tilemap:
                     if tile['type'] == 'walls':
                         surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] * self.tile_size - offset[0], tile['pos'][1] * self.tile_size - offset[1]))
 
-        # second pass — all other tiles (drawn on top of walls)
+        # pass 2 — offgrid tiles (decor, large_decor, spawners etc.) in front of walls
+        for tile in self.offgrid_tiles:
+            if hide_spawners and tile['type'] in ('spawners', 'portal', 'campfire', 'boss_spawner'):
+                continue
+            surf.blit(self.game.assets[tile['type']][tile['variant']], (tile['pos'][0] - offset[0], tile['pos'][1] - offset[1]))
+
+        # pass 3 — all other on-grid tiles (grass, castle, decor) in front of everything
         for x in range(offset[0] // self.tile_size - 1, (offset[0] + surf.get_width()) // self.tile_size + 2):
             for y in range(offset[1] // self.tile_size - 1, (offset[1] + surf.get_height()) // self.tile_size + 2):
                 loc = str(x) + ';' + str(y)

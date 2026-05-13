@@ -96,13 +96,13 @@ class Boss:
 
     FLOAT_SPEED_P2 = 1
     P2_HEAL_PER_SEC = 30
-    P2_DMG_REDUCTION = 0.6       
+    P2_DMG_REDUCTION = 0.3       
     P2_SLIME_INTERVAL = 1800     
 
     def __init__(self, game, pos):
         self.game = game
         self.pos = list(pos)
-        self.size = (40, self.RENDER_H)  
+        self.size = (40, self.RENDER_H)
 
         self.hp = self.MAX_HP
         self.dead = False
@@ -111,11 +111,12 @@ class Boss:
 
         self.facing_left = False
 
-        self.base_y = self.game.ground_y * 32 - self.RENDER_H - 100
+        self.base_y = self.pos[1]  # use spawner Y position directly
         self.float_timer = 0
 
         self.phase = 1
         self.transforming = False
+        self.transform_cutscene = False
         self.attacking = False
         self.attack_hit = False
         self.range_attacking = False
@@ -198,7 +199,7 @@ class Boss:
     def _spawn_projectile(self):
         direction = -1 if self.facing_left else 1
         px = self.pos[0] + self.size[0] // 2
-        py = self.pos[1] + self.size[1] // 3 - 20
+        py = self.pos[1] + self.size[1] // 3 
         self.projectiles.append(Projectile(self.proj_frames, (px, py), direction))
 
     def _spawn_slimes(self):
@@ -230,13 +231,13 @@ class Boss:
             self.transforming = False
 
             self.animation = Animation(self.anim_death.images, img_dur=8, loop=False)
-            # trigger death text immediately
             self.game.boss_defeated_timer = 180
             return
 
         if self.phase == 1 and self.hp <= self.MAX_HP // 3.5:
             self.phase = 2
             self.transforming = True
+            self.transform_cutscene = True
             self.attacking = False
             self.range_attacking = False
 
@@ -249,6 +250,13 @@ class Boss:
         player = self.game.player
         dx = player.pos[0] - self.pos[0]
         self.facing_left = dx < 0
+
+        # track the ground surface the player is standing on
+        # player feet = player.pos[1] + player.size[1]
+        # boss feet should match that, so base_y = player_feet - RENDER_H
+        player_feet = player.pos[1] + player.size[1]
+        target_y = player_feet - self.RENDER_H
+        self.base_y += (target_y - self.base_y) * 0.05
 
         self.float_timer += self.FLOAT_FREQ
         self.pos[1] = self.base_y + math.sin(self.float_timer) * self.FLOAT_AMP
@@ -346,7 +354,9 @@ class Boss:
 
             if cur_frame >= total_frames // 3  and not self.attack_hit:
                 ar = self.attack_rect()
-                if ar and ar.colliderect(player.rect()):
+                in_attack = ar and ar.colliderect(player.rect())
+                in_body   = self.rect().colliderect(player.rect())
+                if (in_attack or in_body) and not (player.dashing > 0 and player.mode == "staff"):
                     player.take_damage(self.ATTACK_DMG)
                 self.attack_hit = True
 
