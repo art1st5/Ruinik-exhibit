@@ -108,8 +108,8 @@ class Player(PhysicsEntity):
         self.p2_boss_nearby = False  
         self.DASH_GHOST_ALPHA = 255
         self.attacking = False
-        self.hp = 250
-        self.max_hp = 200
+        self.hp = 200
+        self.max_hp = 300
         self.hurt_cooldown = 0
         self.mode_cooldown = 0
         self.dead = False
@@ -323,7 +323,7 @@ class Slime(PhysicsEntity):
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         self.anim_offset = (-2, -9)  # aligns sprite canvas to hitbox
-        self.hp = 100
+        self.hp = 200
         self.max_hp = 300
         self.hurt_cooldown = 0
         self.dead = False

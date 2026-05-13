@@ -459,12 +459,12 @@ class Game:
                     attack_x = p.pos[0] - attack_w if p.facing_left else p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1] - attack_h + p.size[1], attack_w, attack_h)
                     if attack_rect.colliderect(boss.rect()):
-                        dmg = 80 if boss.phase == 2 else 50
+                        dmg = 80 if boss.phase == 2 else 35
                         boss.take_damage(dmg)
 
                 if self.player.dashing > 0 and self.player.mode == "staff":
                     if id(boss) not in self.player.dash_hit and self.player.rect().colliderect(boss.rect()):
-                        dmg = 40 if boss.phase == 2 else 60
+                        dmg = 40 if boss.phase == 2 else 50
                         boss.take_damage(dmg)
                         self.player.dash_hit.add(id(boss))
 
@@ -505,12 +505,12 @@ class Game:
                         attack_x = p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1], attack_w, attack_h)
                     if attack_rect.colliderect(slime.rect()):
-                        slime.take_damage(25)
+                        slime.take_damage(10)
 
                 if (self.player.dashing > 0 and self.player.mode == "staff"
                         and not slime.dead and id(slime) not in self.player.dash_hit
                         and self.player.rect().colliderect(slime.rect())):
-                    slime.take_damage(15)
+                    slime.take_damage(5)
                     self.player.dash_hit.add(id(slime))
 
             if self.show_hitboxes:
