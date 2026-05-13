@@ -385,22 +385,23 @@ class Game:
                 hy = int(self.player.pos[1] - render_scroll[1] - 12)
                 self.display.blit(hint_surf, (hx, hy))
 
-            # barrier warning — shows when player HP drops to 25%
-            if self.player.hp / self.player.max_hp <= 0.25 and not self.player.dead:
-                if self.barrier_warning_timer == 0:
-                    self.barrier_warning_timer = 180  # show for 3 seconds on first trigger
-                self.barrier_warning_timer = max(self.barrier_warning_timer, 1)  # keep showing while at low HP
-            else:
-                if self.barrier_warning_timer > 0:
-                    self.barrier_warning_timer -= 1
+            # barrier warning — only on map1
+            if self.current_level == 1:
+                if self.player.hp / self.player.max_hp <= 0.25 and not self.player.dead:
+                    if self.barrier_warning_timer == 0:
+                        self.barrier_warning_timer = 180
+                    self.barrier_warning_timer = max(self.barrier_warning_timer, 1)
+                else:
+                    if self.barrier_warning_timer > 0:
+                        self.barrier_warning_timer -= 1
 
-            if self.barrier_warning_timer > 0:
-                alpha = min(255, self.barrier_warning_timer * 4)
-                warn_surf = self.hint_font.render("No escape!", True, (255, 60, 60))
-                warn_surf.set_alpha(alpha)
-                wx = int(self.player.pos[0] - render_scroll[0] + self.player.size[0] // 2 - warn_surf.get_width() // 2)
-                wy = int(self.player.pos[1] - render_scroll[1] - 22)
-                self.display.blit(warn_surf, (wx, wy))
+                if self.barrier_warning_timer > 0:
+                    alpha = min(255, self.barrier_warning_timer * 4)
+                    warn_surf = self.hint_font.render("No escape!", True, (255, 60, 60))
+                    warn_surf.set_alpha(alpha)
+                    wx = int(self.player.pos[0] - render_scroll[0] + self.player.size[0] // 2 - warn_surf.get_width() // 2)
+                    wy = int(self.player.pos[1] - render_scroll[1] - 22)
+                    self.display.blit(warn_surf, (wx, wy))
 
             all_clear = (all(s.dead for s in self.slimes) if self.slimes else True) and \
                         (all(b.dead for b in self.bosses) if self.bosses else True)

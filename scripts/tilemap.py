@@ -58,7 +58,8 @@ class Tilemap:
     def physics_rects_around(self, pos): 
         rects = []
         player = self.game.player
-        barrier_active = (player.hp / player.max_hp) <= 0.25
+        barrier_active = (self.game.current_level == 1 and
+                          (player.hp / player.max_hp) <= 0.25)
 
         for tile in self.tiles_around(pos):
             if tile['type'] in PHYSICS_TILES:
