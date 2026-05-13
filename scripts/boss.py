@@ -81,14 +81,14 @@ class Boss:
     FLOAT_AMP = 8
     FLOAT_FREQ = 0.04
 
-    ATTACK_RANGE = 80
+    ATTACK_RANGE = 30
     RANGE_THRESHOLD = 100
 
-    ATTACK_DMG = 50
+    ATTACK_DMG = 15
     RANGE_COOLDOWN = 90
 
-    SPCL_RANGE = 40
-    SPCL_DMG = 10
+    SPCL_RANGE = 30
+    SPCL_DMG = 25
     SPCL_COOLDOWN = 80
 
     TELEPORT_RANGE = 200
@@ -97,7 +97,7 @@ class Boss:
     FLOAT_SPEED_P2 = 1
     P2_HEAL_PER_SEC = 35
     P2_DMG_REDUCTION = 0.3       
-    P2_SLIME_INTERVAL = 1800     
+    P2_SLIME_INTERVAL = 3000     
 
     def __init__(self, game, pos):
         self.game = game
@@ -204,7 +204,7 @@ class Boss:
 
     def _spawn_slimes(self):
         from scripts.entities import Slime
-        for offset_x in (-80 -50, 50, 80):
+        for offset_x in (-50, 50):
             sx = self.pos[0] + offset_x
             sy = self.pos[1]
             self.game.slimes.append(Slime(self.game, (sx, sy)))

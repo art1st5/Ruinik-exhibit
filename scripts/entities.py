@@ -108,7 +108,7 @@ class Player(PhysicsEntity):
         self.p2_boss_nearby = False  
         self.DASH_GHOST_ALPHA = 255
         self.attacking = False
-        self.hp = 200
+        self.hp = 250
         self.max_hp = 200
         self.hurt_cooldown = 0
         self.mode_cooldown = 0

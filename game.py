@@ -5,7 +5,7 @@ import sys
 from scripts.entities import PhysicsEntity, Player, Slime
 from scripts.utils import load_image, load_images, Animation
 from scripts.tilemap import Tilemap
-#from scripts.clouds import Clouds
+from scripts.clouds import Clouds
 from scripts.menu import Menu
 from scripts.portal import Portal
 from scripts.campfire import Campfire
@@ -21,8 +21,8 @@ class Game:
         self.display = None  
 
         self.clock = pygame.time.Clock()
-        self.zoom = 4
-        self.level_zoom = [4 , 2.5] 
+        self.zoom = 5
+        self.level_zoom = [5 , 2.5] 
         self._update_display_surface()
         self.show_hitboxes = False
         self.barrier_warning_timer = 0  
@@ -127,7 +127,6 @@ class Game:
         }
 
 
-       # self.clouds = Clouds(self.assets['clouds'], count = 3)
 
         self.player = Player(self, (180, 200), (12, 28)) 
 
@@ -159,6 +158,8 @@ class Game:
         self.bg_layers_front_scaled = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_layers_front']]
         self.bg_home_back_scaled  = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_home_back']]
         self.bg_home_front_scaled = [(pygame.transform.scale(img, (sw, sh)), spd) for img, spd in self.assets['bg_home_front']]
+        self.clouds = Clouds(self.assets['clouds'], count = 3)
+
         self._set_bg_for_level()
 
 
@@ -504,12 +505,12 @@ class Game:
                         attack_x = p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1], attack_w, attack_h)
                     if attack_rect.colliderect(slime.rect()):
-                        slime.take_damage(15)
+                        slime.take_damage(25)
 
                 if (self.player.dashing > 0 and self.player.mode == "staff"
                         and not slime.dead and id(slime) not in self.player.dash_hit
                         and self.player.rect().colliderect(slime.rect())):
-                    slime.take_damage(50)
+                    slime.take_damage(15)
                     self.player.dash_hit.add(id(slime))
 
             if self.show_hitboxes:
