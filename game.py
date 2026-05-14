@@ -325,7 +325,7 @@ class Game:
             img = pygame.image.load(os.path.join(cs_folder, fn)).convert_alpha()
             cutscene_imgs.append(pygame.transform.scale(img, (sw, sh)))
 
-        HOLD_PER_FRAME = 14
+        HOLD_PER_FRAME = 12
         for img in cutscene_imgs:
             for f in range(HOLD_PER_FRAME):
                 pump()
