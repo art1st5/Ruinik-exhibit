@@ -84,7 +84,7 @@ class Boss:
     ATTACK_RANGE = 30
     RANGE_THRESHOLD = 100
 
-    ATTACK_DMG = 15
+    ATTACK_DMG = 30
     RANGE_COOLDOWN = 90
 
     SPCL_RANGE = 30

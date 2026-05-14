@@ -16,7 +16,8 @@ class Game:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption("Ruinik")
-        self.screen = pygame.display.set_mode((1280, 720))#, pygame.FULLSCREEN)
+        self.is_fullscreen = True
+        self.screen = pygame.display.set_mode((1280, 720), pygame.FULLSCREEN)
         self.running = True
         self.display = None  
 
@@ -175,7 +176,7 @@ class Game:
 
         ZOOM_IN_FRAMES  = 70
         HOLD_FRAMES     = 90   
-        ZOOM_OUT_FRAMES = 100
+        ZOOM_OUT_FRAMES = 60
         TARGET_ZOOM     = self.zoom * 3.0
         DIALOGUE        = "ENOUGH GAMES!!"
 
@@ -340,24 +341,51 @@ class Game:
 
         final_frames = self.assets['final_attack']
         IMG_DUR = 4 # ← speed of final attack frames (lower = faster)
-        game_scroll_x = self.scroll[0]
-        game_scroll_y = self.scroll[1]
+        
+        total_frames = len(final_frames) * IMG_DUR
+        player_cx = self.player.pos[0] + self.player.size[0] // 2
+        player_cy = self.player.pos[1] + self.player.size[1] // 2
+        target_scroll_x = player_cx - self.display.get_width() // 2
+        target_scroll_y = player_cy - self.display.get_height() // 2
+        start_scroll_x = self.scroll[0]
+        start_scroll_y = self.scroll[1]
+        
+        frame_idx = 0
         for frame_img in final_frames:
             for _ in range(IMG_DUR):
                 pump()
-                render_world(self.zoom, game_scroll_x, game_scroll_y)
-                fa_w = int(frame_img.get_width() * 2)
-                fa_h = int(frame_img.get_height() * 2)
+                t = frame_idx / max(1, total_frames - 1)
+                t_eased = 1 - (1 - t) ** 3  # ease out cubic
+                
+                current_zoom = self.zoom + (TARGET_ZOOM - self.zoom) * t_eased
+                curr_scroll_x = start_scroll_x + (target_scroll_x - start_scroll_x) * t_eased
+                curr_scroll_y = start_scroll_y + (target_scroll_y - start_scroll_y) * t_eased
+                
+                render_world(current_zoom, curr_scroll_x, curr_scroll_y)
+                
+                zoom_factor = current_zoom / self.zoom
+                fa_w = int(frame_img.get_width() * 2 * zoom_factor)
+                fa_h = int(frame_img.get_height() * 2 * zoom_factor)
                 fa_scaled = pygame.transform.scale(frame_img, (fa_w, fa_h))
+                
                 # flip to face toward the boss
                 if not boss.facing_left:
                     fa_scaled = pygame.transform.flip(fa_scaled, True, False)
-                scale_x = sw / self.display.get_width()
-                scale_y = sh / self.display.get_height()
-                px = int((self.player.pos[0] - game_scroll_x + self.player.size[0] // 2) * scale_x - fa_w // 2)
-                py = int((self.player.pos[1] - game_scroll_y + self.player.size[1] // 2) * scale_y - fa_h // 2)
+                
+                scaled_w = int(self.display.get_width() * current_zoom)
+                scaled_h = int(self.display.get_height() * current_zoom)
+                bx = (sw - scaled_w) // 2
+                by = (sh - scaled_h) // 2
+                
+                dx = player_cx - curr_scroll_x
+                dy = player_cy - curr_scroll_y
+                
+                px = int(bx + dx * current_zoom - fa_w // 2)
+                py = int(by + dy * current_zoom - fa_h // 2)
+                
                 self.screen.blit(fa_scaled, (px, py))
                 pygame.display.update(); clock.tick(60)
+                frame_idx += 1
 
         # ── 6. flash then death animation ─────────────────────────────────────
         for f in range(20):
@@ -604,7 +632,7 @@ class Game:
                     attack_x = p.pos[0] - attack_w if p.facing_left else p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1] - attack_h + p.size[1], attack_w, attack_h)
                     if attack_rect.colliderect(boss.rect()):
-                        dmg = 100 if boss.phase == 2 else 120
+                        dmg = 80 if boss.phase == 2 else 120
                         boss.take_damage(dmg)
 
                 if self.player.dashing > 0 and self.player.mode == "staff":
@@ -825,7 +853,17 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.paused = not self.paused
+                        if getattr(self, 'is_fullscreen', False):
+                            self.is_fullscreen = False
+                            self.screen = pygame.display.set_mode((1280, 720))
+                        else:
+                            self.paused = not self.paused
+                    if event.key == pygame.K_F11:
+                        self.is_fullscreen = not getattr(self, 'is_fullscreen', False)
+                        if self.is_fullscreen:
+                            self.screen = pygame.display.set_mode((1280, 720), pygame.FULLSCREEN)
+                        else:
+                            self.screen = pygame.display.set_mode((1280, 720))
                     if event.key == pygame.K_a:
                         self.movement[0] = True
                     if event.key == pygame.K_d:
