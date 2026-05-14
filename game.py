@@ -21,8 +21,8 @@ class Game:
         self.display = None  
 
         self.clock = pygame.time.Clock()
-        self.zoom = 5.5
-        self.level_zoom = [5.5 , 2.5] 
+        self.zoom = 4
+        self.level_zoom = [4 , 2.5] 
         self._update_display_surface()
         self.show_hitboxes = False
         self.barrier_warning_timer = 0  
@@ -92,8 +92,11 @@ class Game:
             'player/jump_left':Animation(load_images('PLAYER/jumpLEFT'), img_dur=16),
             'player/death': Animation(load_images('PLAYER/death'), img_dur=8, loop=False),
 
-            'staff/dash':Animation(load_images('PLAYER/dash'), img_dur=8), 
-            'staff/dash_left':Animation(load_images('PLAYER/dash_left'), img_dur=8),
+            'staff/dash':Animation(load_images('PLAYER/dash'), img_dur=2), 
+            'staff/dash_left':Animation(load_images('PLAYER/dash_left'), img_dur=2),
+            'dash_trail': load_images('PLAYER/dash'),
+            'dash_trail_left': load_images('PLAYER/dash_left'),
+            'final_attack': load_images('PLAYER/FINALATTACK'),
 
             'staff/idle':Animation(load_images('PLAYER/staff_mode/staff_idle'), img_dur=12),
             'staff/idle_left':Animation(load_images('PLAYER/staff_mode/staff_idle_left'), img_dur=12),
@@ -128,11 +131,11 @@ class Game:
 
 
 
-        self.player = Player(self, (180, 200), (12, 28)) 
+        self.player = Player(self, (180, 260), (12, 28)) 
 
         self.levels = ['map.json', 'map1.json']  
         self.current_level = 0
-        self.level_spawns = [(180, 300), (180, 160)]  
+        self.level_spawns = [(180,260), (180, 160)]  
 
         self.tilemap = Tilemap(self, tile_size=32)
         self.tilemap.load(self.levels[self.current_level])
@@ -244,8 +247,134 @@ class Game:
             render_frame(TARGET_ZOOM + (self.zoom - TARGET_ZOOM) * t_e, alpha)
             clock.tick(60)
 
-        # restore hurt cooldown
         boss.hurt_cooldown = saved_hurt
+
+    def _play_boss_death_cutscene(self, boss):
+        """Full death sequence: zoom on boss → dialogue → cutscene images → final attack → death."""
+        import os
+        clock = pygame.time.Clock()
+        sw, sh = self.screen.get_size()
+        dialogue_font = pygame.font.Font('fonts/PixelPurl.ttf', 35)
+
+        def render_world(current_zoom, scroll_x, scroll_y):
+            rs = (int(scroll_x), int(scroll_y))
+            self.display.fill((0, 0, 0, 0))
+            for layer_img, speed in self.active_bg_back:
+                ox = int(scroll_x * speed) % sw
+                self.screen.blit(layer_img, (-ox, 0))
+                self.screen.blit(layer_img, (sw - ox, 0))
+            for layer_img, speed in self.active_bg_front:
+                ox = int(scroll_x * speed) % sw
+                self.screen.blit(layer_img, (-ox, 0))
+                self.screen.blit(layer_img, (sw - ox, 0))
+            self.tilemap.render(self.display, offset=rs)
+            boss.render(self.display, offset=rs)
+            scaled_w = int(self.display.get_width() * current_zoom)
+            scaled_h = int(self.display.get_height() * current_zoom)
+            scaled = pygame.transform.scale(self.display, (scaled_w, scaled_h))
+            bx = (sw - scaled_w) // 2
+            by = (sh - scaled_h) // 2
+            self.screen.blit(scaled, (bx, by))
+
+        def draw_dialogue(text, alpha):
+            surf = dialogue_font.render(text, True, (255, 220, 80))
+            surf.set_alpha(alpha)
+            self.screen.blit(surf, surf.get_rect(center=(sw // 2, sh - 80)))
+
+        def pump():
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit(); import sys; sys.exit()
+
+        TARGET_ZOOM = self.zoom * 3.0
+        ZOOM_FRAMES = 25
+        boss_cx = boss.pos[0] + boss.size[0] // 2
+        boss_cy = boss.pos[1] + boss.size[1] // 2
+        scroll_x = boss_cx - self.display.get_width() // 2
+        scroll_y = boss_cy - self.display.get_height() // 2
+        saved_hurt = boss.hurt_cooldown
+        boss.hurt_cooldown = 0
+
+        for f in range(ZOOM_FRAMES):
+            pump()
+            t = 1 - (1 - f / ZOOM_FRAMES) ** 2
+            render_world(self.zoom + (TARGET_ZOOM - self.zoom) * t, scroll_x, scroll_y)
+            pygame.display.update(); clock.tick(60)
+
+        # ── 2. boss dialogue: "Who are you!?" ─────────────────────────────────
+        for f in range(70):
+            pump()
+            render_world(TARGET_ZOOM, scroll_x, scroll_y)
+            draw_dialogue('Who are you!?', min(255, f * 8))
+            pygame.display.update(); clock.tick(60)
+
+        # ── 3. zoom out ───────────────────────────────────────────────────────
+        for f in range(ZOOM_FRAMES):
+            pump()
+            t = 1 - (1 - f / ZOOM_FRAMES) ** 2
+            render_world(TARGET_ZOOM + (self.zoom - TARGET_ZOOM) * t, scroll_x, scroll_y)
+            pygame.display.update(); clock.tick(60)
+
+        boss.hurt_cooldown = saved_hurt
+
+        cutscene_imgs = []
+        cs_folder = 'data/images/cutscene'
+        files = sorted(os.listdir(cs_folder),
+                       key=lambda f: int(''.join(filter(str.isdigit, f.split('.')[0])) or 0))
+        for fn in files:
+            img = pygame.image.load(os.path.join(cs_folder, fn)).convert_alpha()
+            cutscene_imgs.append(pygame.transform.scale(img, (sw, sh)))
+
+        HOLD_PER_FRAME = 14
+        for img in cutscene_imgs:
+            for f in range(HOLD_PER_FRAME):
+                pump()
+                self.screen.blit(img, (0, 0))
+                # subtitle
+                sub = dialogue_font.render('Just a mere merchant', True, (255, 220, 80))
+                sub_bg = pygame.Surface((sub.get_width() + 20, sub.get_height() + 10), pygame.SRCALPHA)
+                sub_bg.fill((0, 0, 0, 160))
+                self.screen.blit(sub_bg, sub_bg.get_rect(center=(sw // 2, sh - 70)))
+                self.screen.blit(sub, sub.get_rect(center=(sw // 2, sh - 70)))
+                pygame.display.update(); clock.tick(60)
+
+        final_frames = self.assets['final_attack']
+        IMG_DUR = 4 # ← speed of final attack frames (lower = faster)
+        game_scroll_x = self.scroll[0]
+        game_scroll_y = self.scroll[1]
+        for frame_img in final_frames:
+            for _ in range(IMG_DUR):
+                pump()
+                render_world(self.zoom, game_scroll_x, game_scroll_y)
+                fa_w = int(frame_img.get_width() * 2)
+                fa_h = int(frame_img.get_height() * 2)
+                fa_scaled = pygame.transform.scale(frame_img, (fa_w, fa_h))
+                # flip to face toward the boss
+                if not boss.facing_left:
+                    fa_scaled = pygame.transform.flip(fa_scaled, True, False)
+                scale_x = sw / self.display.get_width()
+                scale_y = sh / self.display.get_height()
+                px = int((self.player.pos[0] - game_scroll_x + self.player.size[0] // 2) * scale_x - fa_w // 2)
+                py = int((self.player.pos[1] - game_scroll_y + self.player.size[1] // 2) * scale_y - fa_h // 2)
+                self.screen.blit(fa_scaled, (px, py))
+                pygame.display.update(); clock.tick(60)
+
+        # ── 6. flash then death animation ─────────────────────────────────────
+        for f in range(20):
+            pump()
+            alpha = int(255 * (f / 20))
+            flash = pygame.Surface((sw, sh))
+            flash.fill((255, 255, 255))
+            flash.set_alpha(alpha)
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(flash, (0, 0))
+            pygame.display.update(); clock.tick(60)
+
+        # trigger actual death
+        boss.defeated = False
+        boss.dying = True
+        boss.animation = Animation(boss.anim_death.images, img_dur=8, loop=False)
+        self.boss_defeated_timer = 180
 
     def _set_bg_for_level(self):
         if self.current_level == 0:
@@ -417,6 +546,12 @@ class Game:
                 player_near = self.player.rect().colliderect(campfire.rect())
                 campfire.update(player_near)
                 campfire.render(self.display, offset=render_scroll)
+                # show hint text above campfire when player is not already near
+                if not player_near:
+                    cf_cx = int(campfire.pos[0] - render_scroll[0] + campfire.size[0] // 2)
+                    cf_ty = int(campfire.pos[1] - render_scroll[1] - 14)
+                    hint = self.hint_font.render("Get close to heal", True, (255, 200, 100))
+                    self.display.blit(hint, (cf_cx - hint.get_width() // 2, cf_ty))
 
             self.player.render(self.display, offset=render_scroll)
 
@@ -450,6 +585,15 @@ class Game:
                     boss.transform_cutscene = False
                     self._play_boss_transform_cutscene(boss)
 
+                # defeated idle — show Press F prompt when player is near
+                if boss.defeated and not boss.dead:
+                    dist = abs(self.player.pos[0] - boss.pos[0])
+                    if dist < 60:
+                        prompt = self.hint_font.render("Press F", True, (255, 255, 180))
+                        px = int(boss.pos[0] - render_scroll[0] + boss.size[0] // 2 - prompt.get_width() // 2)
+                        py = int(boss.pos[1] - render_scroll[1] - 16)
+                        self.display.blit(prompt, (px, py))
+
                 if boss.dead:
                     self.bosses.remove(boss)
                     continue
@@ -460,7 +604,7 @@ class Game:
                     attack_x = p.pos[0] - attack_w if p.facing_left else p.pos[0] + p.size[0]
                     attack_rect = pygame.Rect(attack_x, p.pos[1] - attack_h + p.size[1], attack_w, attack_h)
                     if attack_rect.colliderect(boss.rect()):
-                        dmg = 80 if boss.phase == 2 else 40
+                        dmg = 100 if boss.phase == 2 else 120
                         boss.take_damage(dmg)
 
                 if self.player.dashing > 0 and self.player.mode == "staff":
@@ -471,7 +615,7 @@ class Game:
 
             for boss in self.bosses:
                 if not boss.dead:
-                    bbar_w, bbar_h = 120, 8
+                    bbar_w, bbar_h = 80, 6
                     bbar_x = self.display.get_width() // 2 - bbar_w // 2
                     bbar_y = 10
                     fill_w = int(bbar_w * (boss.hp / boss.MAX_HP))
@@ -498,7 +642,7 @@ class Game:
                 
                 if self.player.attacking and not slime.dead:
                     p = self.player
-                    attack_w = 20
+                    attack_w = 40
                     attack_h = 20   
                     if p.facing_left:
                         attack_x = p.pos[0] - attack_w
@@ -703,9 +847,17 @@ class Game:
                         self.show_hitboxes = not self.show_hitboxes
 
                     if event.key == pygame.K_f:
-                        if self.near_portal:
-                            self.current_level = (self.current_level + 1) % len(self.levels)
-                            self.load_level(self.levels[self.current_level])
+                        # check boss death cutscene first
+                        for boss in self.bosses:
+                            if boss.defeated and not boss.dead:
+                                dist = abs(self.player.pos[0] - boss.pos[0])
+                                if dist < 60:
+                                    self._play_boss_death_cutscene(boss)
+                                    break
+                        else:
+                            if self.near_portal:
+                                self.current_level = (self.current_level + 1) % len(self.levels)
+                                self.load_level(self.levels[self.current_level])
                 
 
                     

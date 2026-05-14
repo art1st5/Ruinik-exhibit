@@ -14,11 +14,10 @@ class PhysicsEntity:
         self.set_action('idle')
         self.facing_left = False
 
-    def rect (self):
-        return pygame.Rect(self.pos[0], self.pos[1], self.size [0], self.size[1])
-    
+    def rect(self):
+        return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
+
     def set_action(self, action):
- 
         if action == 'death':
             key = 'player/death'
         elif self.mode == "staff":
@@ -35,27 +34,24 @@ class PhysicsEntity:
             self.animation = self.game.assets[key].copy()
 
     def update(self, tilemap, movement=(0, 0)):
-
         self.collisions = {'up': False, 'down':False, 'right': False, 'left': False}
 
         if hasattr(self, "dashing") and self.dashing > 0:
             frame_movement = (self.velocity[0], self.velocity[1])
         else:
             frame_movement = (movement[0] + self.velocity[0], movement[1] + self.velocity[1])
-        
-        
+
         self.pos[0] += frame_movement[0]
         entity_rect = self.rect()
         for rect in tilemap.physics_rects_around(self.pos):
             if entity_rect.colliderect(rect):
                 if frame_movement[0] > 0:
                     entity_rect.right = rect.left
-                    self.collisions['right'] =  True
+                    self.collisions['right'] = True
                 if frame_movement[0] < 0:
                     entity_rect.left = rect.right
-                    self.collisions['left'] = True                    
+                    self.collisions['left'] = True
                 self.pos[0] = entity_rect.x
-            
 
         self.pos[1] += frame_movement[1]
         entity_rect = self.rect()
@@ -66,36 +62,35 @@ class PhysicsEntity:
                     self.collisions['down'] = True
                 if frame_movement[1] < 0:
                     entity_rect.top = rect.bottom
-                    self.collisions['up'] = True    
+                    self.collisions['up'] = True
                 self.pos[1] = entity_rect.y
-
 
         self.velocity[1] = min(5, self.velocity[1] + 0.1)
 
         if self.collisions['down'] or self.collisions['up']:
-            self.velocity [1] = 0
+            self.velocity[1] = 0
 
         GROUND_LEVEL = self.game.ground_y * self.game.tilemap.tile_size
-
         if self.pos[1] + self.size[1] >= GROUND_LEVEL:
             self.pos[1] = GROUND_LEVEL - self.size[1]
             self.velocity[1] = 0
             self.collisions['down'] = True
 
-
-        if not (hasattr(self, "dashing") and self.dashing > 0):    
+        if not (hasattr(self, "dashing") and self.dashing > 0):
             self.animation.update()
- 
-    
+
     def render(self, surf, offset=(0, 0)):
-            img = self.animation.img()
-            surf.blit(img,(int(self.pos[0] - offset[0] + self.anim_offset[0]),int(self.pos[1] - offset[1] + self.anim_offset[1])))
+        img = self.animation.img()
+        surf.blit(img, (int(self.pos[0] - offset[0] + self.anim_offset[0]),
+                        int(self.pos[1] - offset[1] + self.anim_offset[1])))
+
 
 class Player(PhysicsEntity):
-    DASH_COOLDOWN       = 150  
-    DASH_COOLDOWN_P2    = 60  
-    DASH_DISTANCE       = 20    
-    DASH_DISTANCE_P2    = 35   
+    DASH_COOLDOWN    = 150
+    DASH_COOLDOWN_P2 = 60
+    DASH_DISTANCE    = 15
+    DASH_DISTANCE_P2 = 15
+
     def __init__(self, game, pos, size):
         self.mode = "normal"
         super().__init__(game, 'player', pos, size)
@@ -103,24 +98,22 @@ class Player(PhysicsEntity):
         self.air_time = 0
         self.dashing = 0
         self.dash_cooldown = 0
-        self.dash_ghosts = []  
         self.dash_hit = set()
-        self.p2_boss_nearby = False  
-        self.DASH_GHOST_ALPHA = 255
+        self.p2_boss_nearby = False
         self.attacking = False
         self.hp = 200
-        self.max_hp = 300
+        self.max_hp = 200
         self.hurt_cooldown = 0
         self.mode_cooldown = 0
         self.dead = False
-        self.jump_hint_timer = 0  
+        self.jump_hint_timer = 0
         self.attack_cooldown = 0
 
     def dash(self):
         if self.dead:
             return
         if self.mode != "staff":
-            return 
+            return
 
         if self.dashing == 0 and self.dash_cooldown == 0:
             self.dashing = 10
@@ -133,10 +126,8 @@ class Player(PhysicsEntity):
                 self.velocity[0] -= dash_distance
             else:
                 self.velocity[0] += dash_distance
-    
-    def update(self, tilemap, movement = (0, 0)):
-        
-       
+
+    def update(self, tilemap, movement=(0, 0)):
         if self.dead:
             self.animation.update()
             return
@@ -148,39 +139,13 @@ class Player(PhysicsEntity):
 
         if self.dashing > 0:
             self.dashing -= 1
-            if self.dashing % 2 == 0:
-                ghost_img = self.animation.img().copy()
-                if self.p2_boss_nearby and self.mode == "staff":
-                    # tint visible pixels cyan, keep transparency clean
-                    tinted = pygame.Surface(ghost_img.get_size(), pygame.SRCALPHA)
-                    tinted.blit(ghost_img, (0, 0))
-                    tinted.fill((143, 211, 255), special_flags=pygame.BLEND_RGB_MULT)
-                    ghost_img = tinted
-                ghost_img.set_alpha(self.DASH_GHOST_ALPHA)
-                if self.mode == "sword" and self.action in ("idle", "idle_left"):
-                    aoff = (-17, -9)
-                elif self.mode == "sword" and self.action in ("attack", "attack_left"):
-                    aoff = (-26, -22)
-                else:
-                    aoff = self.anim_offset
-                ghost_pos = [self.pos[0] + aoff[0], self.pos[1] + aoff[1]]
-                self.dash_ghosts.append([ghost_img, ghost_pos, self.DASH_GHOST_ALPHA])
             if self.dashing == 0:
                 self.velocity[0] = 0
         else:
             self.velocity[0] *= 0.9
 
-        for ghost in self.dash_ghosts[:]:
-            ghost[2] -= 25
-            if ghost[2] <= 0:
-                self.dash_ghosts.remove(ghost)
-            else:
-                ghost[0].set_alpha(ghost[2])
-
-        
         if movement[0] > 0:
             self.facing_left = False
-
         if movement[0] < 0:
             self.facing_left = True
 
@@ -192,58 +157,44 @@ class Player(PhysicsEntity):
 
         if self.hurt_cooldown > 0:
             self.hurt_cooldown -= 1
-
         if self.dash_cooldown > 0:
             self.dash_cooldown -= 1
-
         if self.mode_cooldown > 0:
             self.mode_cooldown -= 1
-
         if self.jump_hint_timer > 0:
             self.jump_hint_timer -= 1
-
         if self.attack_cooldown > 0:
             self.attack_cooldown -= 1
 
         if self.dashing > 0:
-
             if self.facing_left:
                 self.set_action('dash_left')
             else:
                 self.set_action('dash')
-
         elif self.attacking:
             if self.animation.done:
                 self.attacking = False
-                self.attack_cooldown = 40  
+                self.attack_cooldown = 40
             else:
-        
                 if self.facing_left:
                     self.set_action('attack_left')
                 else:
                     self.set_action('attack')
-
         elif self.air_time > 4:
-
             if self.facing_left:
                 self.set_action('jump_left')
             else:
                 self.set_action('jump')
-
         elif movement[0] != 0:
-
             if self.facing_left:
                 self.set_action('run_left')
             else:
                 self.set_action('run')
-
         else:
-
             if self.facing_left:
                 self.set_action('idle_left')
             else:
                 self.set_action('idle')
-
 
     def take_damage(self, amount):
         if self.hurt_cooldown == 0 and not self.dead:
@@ -266,8 +217,6 @@ class Player(PhysicsEntity):
             self.set_action("attack")
 
     def render(self, surf, offset=(0, 0)):
-        for ghost_img, ghost_pos, _ in self.dash_ghosts:
-            surf.blit(ghost_img, (int(ghost_pos[0] - offset[0]), int(ghost_pos[1] - offset[1])))
 
         if self.mode == "sword" and self.action in ("idle", "idle_left"):
             anim_offset = (-17, -9)
@@ -278,28 +227,47 @@ class Player(PhysicsEntity):
         else:
             anim_offset = self.anim_offset
         img = self.animation.img()
-        surf.blit(img, (int(self.pos[0] - offset[0] + anim_offset[0]), int(self.pos[1] - offset[1] + anim_offset[1])))
+
+        # dash scale effect — shrink to middle then grow back
+        if self.dashing > 0:
+            DASH_TOTAL = 10
+            t = 1.0 - (self.dashing / DASH_TOTAL)  # 0.0 at start → 1.0 at end
+            if t < 0.5:
+                scale = 1.0 - (t / 0.5) * 0.9
+            else:
+                scale = 0.3 + ((t - 0.5) / 0.5) * 0.9
+            scale = max(0.1, scale)
+            new_w = max(1, int(img.get_width() * scale))
+            new_h = max(1, int(img.get_height() * scale))
+            img = pygame.transform.scale(img, (new_w, new_h))
+            # re-centre so it shrinks from the middle
+            cx = int(self.pos[0] - offset[0] + anim_offset[0] + self.animation.img().get_width() // 2)
+            cy = int(self.pos[1] - offset[1] + anim_offset[1] + self.animation.img().get_height() // 2)
+            surf.blit(img, (cx - new_w // 2, cy - new_h // 2))
+        else:
+            surf.blit(img, (int(self.pos[0] - offset[0] + anim_offset[0]),
+                            int(self.pos[1] - offset[1] + anim_offset[1])))
 
     def toggle_mode(self):
-            if self.mode_cooldown > 0:
-                return
-            self.mode = "staff" if self.mode == "normal" else "normal"
-            self.action = ""
-            self.set_action("idle")
-            self.mode_cooldown = 90  
+        if self.mode_cooldown > 0:
+            return
+        self.mode = "staff" if self.mode == "normal" else "normal"
+        self.action = ""
+        self.set_action("idle")
+        self.mode_cooldown = 90
 
     def toggle_sword_mode(self):
-            if self.mode_cooldown > 0:
-                return
-            self.mode = "sword" if self.mode != "sword" else "normal"
-            self.action = ""
-            self.set_action("idle")
-            self.mode_cooldown = 90  
+        if self.mode_cooldown > 0:
+            return
+        self.mode = "sword" if self.mode != "sword" else "normal"
+        self.action = ""
+        self.set_action("idle")
+        self.mode_cooldown = 90
 
     def jump(self):
         if self.dead or self.mode == "sword":
             if self.mode == "sword":
-                self.jump_hint_timer = 120  
+                self.jump_hint_timer = 120
             return
         if self.jumps:
             self.velocity[1] = -4 if self.mode == "staff" else -2
@@ -308,8 +276,8 @@ class Player(PhysicsEntity):
 
 
 class Slime(PhysicsEntity):
-    DETECT_RANGE = 60   # starts chasing player
-    ATTACK_RANGE = 28   # starts attacking (should roughly match hitbox width)
+    DETECT_RANGE = 60
+    ATTACK_RANGE = 28
     WALK_SPEED   = 0.9
 
     def __init__(self, game, pos):
@@ -322,19 +290,18 @@ class Slime(PhysicsEntity):
         self.size = (25, 23)
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
-        self.anim_offset = (-2, -9)  # aligns sprite canvas to hitbox
-        self.hp = 200
+        self.anim_offset = (-2, -9)
+        self.hp = 100
         self.max_hp = 300
         self.hurt_cooldown = 0
         self.dead = False
-        self.can_deal_damage = False  
+        self.can_deal_damage = False
         self.set_action('idle')
 
     def rect(self):
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
 
     def attack_rect(self):
-        """Hitbox extended 5px on the facing side when attacking."""
         ext = 5
         if self.facing_left:
             return pygame.Rect(self.pos[0] - ext, self.pos[1], self.size[0] + ext, self.size[1])
@@ -357,7 +324,6 @@ class Slime(PhysicsEntity):
                 self.set_action('death')
 
     def update(self, tilemap, movement=(0, 0)):
-     
         if self.dead:
             self.animation.update()
             return
@@ -375,7 +341,6 @@ class Slime(PhysicsEntity):
                 self.action = ''
 
             if in_attack_range:
-                # close enough — stand and attack
                 super().update(tilemap, movement=(0, 0))
                 if self.facing_left:
                     self.set_action('attack_left')
@@ -390,7 +355,6 @@ class Slime(PhysicsEntity):
                     self.game.player.take_damage(30)
                     self.can_deal_damage = False
             else:
-                # detected but not close enough — walk toward player
                 self.can_deal_damage = False
                 walk_dir = -self.WALK_SPEED if self.facing_left else self.WALK_SPEED
                 super().update(tilemap, movement=(walk_dir, 0))

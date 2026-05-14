@@ -96,7 +96,7 @@ class Menu:
         title = self.font_item.render('Keybinds', True, (255, 220, 50))
         self.screen.blit(title, title.get_rect(center=(cx, sh // 2 - panel_h // 2 + 40)))
 
-        font_kb = pygame.font.Font('fonts/ARCADECLASSIC.TTF', 22)
+        font_kb = pygame.font.Font('fonts/PixelPurl.ttf', 22)
         row_h = 38
         start_y = sh // 2 - panel_h // 2 + 110
         key_x   = cx - 260

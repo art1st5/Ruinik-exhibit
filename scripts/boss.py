@@ -69,7 +69,7 @@ def _load_sorted(folder, target_size=None):
 class Boss:
     FRAME_W = 500
     FRAME_H = 500
-    MAX_HP = 1000
+    MAX_HP = 600
 
 
     RENDER_SCALE = 1       
@@ -88,7 +88,7 @@ class Boss:
     RANGE_COOLDOWN = 90
 
     SPCL_RANGE = 30
-    SPCL_DMG = 25
+    SPCL_DMG = 15
     SPCL_COOLDOWN = 80
 
     TELEPORT_RANGE = 200
@@ -117,6 +117,7 @@ class Boss:
         self.phase = 1
         self.transforming = False
         self.transform_cutscene = False
+        self.defeated = False
         self.attacking = False
         self.attack_hit = False
         self.range_attacking = False
@@ -224,14 +225,15 @@ class Boss:
         self.hurt_cooldown = 30
 
         if self.hp == 0:
-            self.dying = True
+            # stop everything — enter defeated idle for player interaction
+            self.defeated = True
+            self.dying = False
             self.attacking = False
             self.range_attacking = False
             self.spcl_attacking = False
             self.transforming = False
-
-            self.animation = Animation(self.anim_death.images, img_dur=8, loop=False)
-            self.game.boss_defeated_timer = 180
+            self.teleporting = False
+            self.animation = self.anim_idle
             return
 
         if self.phase == 1 and self.hp <= self.MAX_HP // 3:
@@ -245,6 +247,11 @@ class Boss:
 
     def update(self):
         if self.dead:
+            return
+
+        if self.defeated:
+            # frozen in idle — wait for player to trigger death cutscene
+            self.animation.update()
             return
 
         player = self.game.player
